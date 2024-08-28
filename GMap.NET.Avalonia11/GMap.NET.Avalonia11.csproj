@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+      <PackageId>GMap.NET.WinAvalonia</PackageId>
+      <Product>GMap.NET.WinAvalonia</Product>
+      <AssemblyTitle>GMap.NET.WinAvalonia11</AssemblyTitle>
+      <RootNamespace>GMap.NET</RootNamespace>
+      <TargetFrameworks>net48;net8.0</TargetFrameworks>
+      <Nullable>enable</Nullable>
+      <LangVersion>default</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GMap.NET\GMap.NET.Core\GMap.NET.Core.csproj" />
+  </ItemGroup>
+
+</Project>
