@@ -28,6 +28,192 @@ namespace GMap.NET.Avalonia
     /// </summary>
     public partial class GMapControl : Control, Interface, IDisposable
     {
+        # region GMap.NET Control
+        private readonly Core _core = new Core();
+
+        private bool _showTileGridLines;
+
+        /// <summary>
+        /// Current selected area in the map
+        /// </summary>
+        private RectLatLng _selectedArea;
+        /// <summary>
+        ///     use circle for selection
+        /// </summary>
+        public bool SelectionUseCircle { get; } = false;
+        public RectLatLng? BoundsOfMap { get; }
+
+        [Category("GMap.NET")]
+        [Description("maximum zoom level of map")]
+        public int MaxZoom
+        {
+            get { return _core.MaxZoom; }
+            set { _core.MaxZoom = value; }
+        }
+
+        [Category("GMap.NET")]
+        [Description("minimum zoom level of map")]
+        public int MinZoom
+        {
+            get { return _core.MinZoom; }
+            set { _core.MinZoom = value; }
+        }
+
+        [Category("GMap.NET")]
+        [Description("map zooming type for mouse wheel")]
+        public MouseWheelZoomType MouseWheelZoomType
+        {
+            get { return _core.MouseWheelZoomType; }
+            set { _core.MouseWheelZoomType = value; }
+        }
+
+        [Category("GMap.NET")]
+        [Description("enable map zoom on mouse wheel")]
+        public bool MouseWheelZoomEnabled
+        {
+            get { return _core.MouseWheelZoomEnabled; }
+            set { _core.MouseWheelZoomEnabled = value; }
+        }
+
+        [Category("GMap.NET")]
+        public PointerUpdateKind DragButton { get; } = PointerUpdateKind.LeftButtonPressed;
+
+        [Category("GMap.NET")]
+        public bool ShowTileGridLines
+        {
+            get { return _showTileGridLines; }
+            set
+            {
+                _showTileGridLines = value;
+                InvalidateVisual();
+            }
+        }
+
+        /// <summary>
+        ///     retry count to get tile
+        /// </summary>
+        [Browsable(false)]
+        public int RetryLoadTile
+        {
+            get { return _core.RetryLoadTile; }
+            set { _core.RetryLoadTile = value; }
+        }
+
+        /// <summary>
+        ///     how many levels of tiles are staying decompresed in memory
+        /// </summary>
+        [Browsable(false)]
+        public int LevelsKeepInMemory
+        {
+            get { return _core.LevelsKeepInMemory; }
+            set { _core.LevelsKeepInMemory = value; }
+        }
+
+        [Browsable(false)]
+        public RectLatLng SelectedArea
+        {
+            get { return _selectedArea; }
+            set
+            {
+                _selectedArea = value;
+                InvalidateVisual();
+            }
+        }
+
+        #endregion
+
+        #region Avalonia
+        public static readonly StyledProperty<ObservableCollection<GMapMarker>> MarkersProperty =
+            AvaloniaProperty.Register<GMapControl, ObservableCollection<GMapMarker>>(
+                nameof(Markers));
+        public ObservableCollection<GMapMarker> Markers
+        {
+            get { return GetValue(MarkersProperty); }
+            private set { SetValue(MarkersProperty, value); }
+        }
+
+        private static DataTemplate _dataTemplateInstance;
+        private static ItemsPanelTemplate _itemsPanelTemplateInstance;
+        private static Style _styleInstance;
+
+        /// <summary>
+        ///     current markers overlay offset
+        /// </summary>
+        internal readonly TranslateTransform MapTranslateTransform = new TranslateTransform();
+        internal readonly TranslateTransform MapOverlayTranslateTransform = new TranslateTransform();
+        internal ScaleTransform? MapScaleTransform = new ScaleTransform();
+        internal RotateTransform MapRotateTransform = new RotateTransform();
+
+        /// <summary>
+        ///     pen for empty tile borders
+        /// </summary>
+        public Pen EmptyTileBorders { get; } = new(Brushes.White, 1.0);
+
+        /// <summary>
+        ///     pen for Selection
+        /// </summary>
+        public Pen SelectionPen { get; } = new(Brushes.Blue, 2.0);
+
+        /// <summary>
+        ///     background of selected area
+        /// </summary>
+        public Brush SelectedAreaFill { get; } =
+            new SolidColorBrush(Color.FromArgb(33, Colors.RoyalBlue.R, Colors.RoyalBlue.G, Colors.RoyalBlue.B));
+
+        /// <summary>
+        ///     pen for empty tile background
+        /// </summary>
+        public ISolidColorBrush EmptyTileBrush = Brushes.Navy;
+
+        /// <summary>
+        ///     text on empty tiles
+        /// </summary>
+        public FormattedText EmptyTileText { get; } =
+            GetFormattedText("We are sorry, but we don't\nhave imagery at this zoom\n     level for this region.", 16);
+
+        protected bool DesignModeInConstruct
+        {
+            get { return Design.IsDesignMode; }
+        }
+
+        private Canvas _mapCanvas;
+
+        /// <summary>
+        ///     markers overlay
+        /// </summary>
+        internal Canvas MapCanvas
+        {
+            get
+            {
+                if (_mapCanvas == null)
+                {
+                    if (VisualChildren.Count > 0)
+                    {
+                        _mapCanvas = this.GetVisualDescendants().FirstOrDefault(w => w is Canvas) as Canvas;
+                        _mapCanvas.RenderTransform = MapTranslateTransform;
+                    }
+                }
+
+                return _mapCanvas;
+            }
+        }
+
+        public GMaps Manager
+        {
+            get { return GMaps.Instance; }
+        }
+
+        private static FormattedText GetFormattedText(string text, int size)
+        {
+            return new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("GenericSansSerif"),
+                size, Brushes.AntiqueWhite);
+        }
+        #endregion
+
 
         #region GMap.NET Interfaces
 
@@ -82,7 +268,6 @@ namespace GMap.NET.Avalonia
 
         #region Dispose
         private bool disposedValue;
-
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
